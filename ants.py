@@ -38,12 +38,6 @@ class Ant:
     Represents a single ant on the grid.
     """
     coord: Tuple[int, int] = ANT_HOME_COORD
-    last_vector: Tuple[int, int] = field(
-        default_factory=lambda: random.choice([
-            (1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, -1),
-            (-1, 1), (1, -1)
-        ])
-    )
     state: int = FOOD_HUNT
     current_path: List[Tuple[int, int]] = field(default_factory=list)
     current_path_index: int = -1
