@@ -68,7 +68,7 @@ class Ant:
                         (-1, 1), (1, -1)
                     ]
                     random.shuffle(directions)
-                    for i, vector in enumerate(directions):
+                    for vector in directions:
                         new_pos = (
                             self.coord[0] + vector[0],
                             self.coord[1] + vector[1]
@@ -153,6 +153,7 @@ def main() -> None:
     living_ants = [Ant() for _ in range(ANT_COUNT)]
     paths_to_food: List[List[Tuple[int, int]]] = []
     perform_ticks = False
+    tick_performed = False
     show_paths = True
     tick_interval = 100
     since_last_tick = 0
@@ -180,7 +181,7 @@ def main() -> None:
                     f"Ant Simulation - Stopped 1t/{tick_interval}ms"
                 )
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == pygame.BUTTON_LEFT:
+                if event.button == pygame.BUTTON_LEFT and not tick_performed:
                     mouse_pos = pygame.mouse.get_pos()
                     grid_pos = (
                         mouse_pos[0] // TILE_WIDTH,
@@ -194,6 +195,7 @@ def main() -> None:
             for ant in living_ants:
                 ant.tick(food_grid, paths_to_food)
             since_last_tick = 0
+            tick_performed = True
         ant_tiles = {x.coord for x in living_ants}
         for y, row in enumerate(food_grid):
             for x, tile in enumerate(row):
