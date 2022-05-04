@@ -77,6 +77,10 @@ def main() -> None:
                     tick_interval -= 10
                 elif event.key == pygame.K_UP:
                     tick_interval += 10
+                elif event.key == pygame.K_r:
+                    life_grid = [
+                        [False] * GRID_WIDTH for _ in range(GRID_HEIGHT)
+                    ]
                 pygame.display.set_caption(
                     f"Conway's Game of Life - Running 1t/{tick_interval}ms"
                     if perform_ticks else

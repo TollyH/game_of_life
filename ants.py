@@ -175,6 +175,13 @@ def main() -> None:
                     tick_interval -= 10
                 elif event.key == pygame.K_UP:
                     tick_interval += 10
+                elif event.key == pygame.K_r:
+                    food_grid = [
+                        [False] * GRID_WIDTH for _ in range(GRID_HEIGHT)
+                    ]
+                    living_ants = [Ant() for _ in range(ANT_COUNT)]
+                    paths_to_food = []
+                    tick_performed = False
                 pygame.display.set_caption(
                     f"Ant Simulation - Running 1t/{tick_interval}ms"
                     if perform_ticks else
