@@ -204,6 +204,10 @@ def main() -> None:
             since_last_tick = 0
             tick_performed = True
         ant_tiles = {x.coord for x in living_ants}
+        if show_paths:
+            path_coords = {coord for path in paths_to_food for coord in path}
+        else:
+            path_coords = set()
         for y, row in enumerate(food_grid):
             for x, tile in enumerate(row):
                 if do_tick:
@@ -220,8 +224,7 @@ def main() -> None:
                     colour = BLUE
                 elif (x, y) in ant_tiles:
                     colour = RED
-                elif show_paths and any(
-                        (x, y) in path for path in paths_to_food):
+                elif show_paths and (x, y) in path_coords:
                     colour = PINK
                 else:
                     colour = WHITE
