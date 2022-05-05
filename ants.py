@@ -42,8 +42,8 @@ class Ant:
     current_path: List[Tuple[int, int]] = field(default_factory=list)
     current_path_index: int = -1
 
-    def tick(self, grid: List[List[bool]], paths: List[List[Tuple[int, int]]]
-             ) -> None:
+    def tick(self, grid: List[List[bool]], paths: List[List[Tuple[int, int]]],
+             ants: List['Ant']) -> None:
         """
         Update this ant depending on its state and surroundings.
         """
@@ -57,7 +57,8 @@ class Ant:
                 adjacent_paths = get_adjacent_paths(grid, self.coord, paths)
                 if len(adjacent_paths) >= 1:
                     new_path = random.choice(adjacent_paths)
-                    self.current_path = new_path[0]
+                    # Create a copy of the selected path
+                    self.current_path = [*new_path[0]]
                     self.current_path_index = new_path[1]
                     self.coord = self.current_path[self.current_path_index]
                     self.state = FOLLOW_PATH_FOOD
@@ -88,7 +89,15 @@ class Ant:
                             break
         elif self.state == FOLLOW_PATH_FOOD:
             if self.current_path_index == len(self.current_path) - 1:
-                self.state = FOLLOW_PATH_HOME
+                if len(get_adjacent_food(grid, self.coord)) >= 1:
+                    # Food is still present and the end of the path.
+                    self.state = FOLLOW_PATH_HOME
+                else:
+                    # Food is gone. Forget this path and stop other ants
+                    # following it.
+                    paths.remove(self.current_path)
+                    for ant in ants:
+                        ant.state = FOOD_HUNT
             else:
                 self.current_path_index += 1
                 self.coord = self.current_path[self.current_path_index]
@@ -153,7 +162,6 @@ def main() -> None:
     living_ants = [Ant() for _ in range(ANT_COUNT)]
     paths_to_food: List[List[Tuple[int, int]]] = []
     perform_ticks = False
-    tick_performed = False
     show_paths = True
     tick_interval = 100
     since_last_tick = 0
@@ -181,14 +189,13 @@ def main() -> None:
                     ]
                     living_ants = [Ant() for _ in range(ANT_COUNT)]
                     paths_to_food = []
-                    tick_performed = False
                 pygame.display.set_caption(
                     f"Ant Simulation - Running 1t/{tick_interval}ms"
                     if perform_ticks else
                     f"Ant Simulation - Stopped 1t/{tick_interval}ms"
                 )
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == pygame.BUTTON_LEFT and not tick_performed:
+                if event.button == pygame.BUTTON_LEFT:
                     mouse_pos = pygame.mouse.get_pos()
                     grid_pos = (
                         mouse_pos[0] // TILE_WIDTH,
@@ -200,9 +207,8 @@ def main() -> None:
         screen.fill(WHITE)
         if do_tick:
             for ant in living_ants:
-                ant.tick(food_grid, paths_to_food)
+                ant.tick(food_grid, paths_to_food, living_ants)
             since_last_tick = 0
-            tick_performed = True
         ant_tiles = {x.coord for x in living_ants}
         if show_paths:
             path_coords = {coord for path in paths_to_food for coord in path}
