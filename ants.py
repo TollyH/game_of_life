@@ -42,19 +42,19 @@ class Ant:
     current_path: List[Tuple[int, int]] = field(default_factory=list)
     current_path_index: int = -1
 
-    def tick(self, grid: List[List[bool]], paths: List[List[Tuple[int, int]]],
-             ants: List['Ant']) -> None:
+    def tick(self, food: List[Tuple[int, int]],
+             paths: List[List[Tuple[int, int]]], ants: List['Ant']) -> None:
         """
         Update this ant depending on its state and surroundings.
         """
         if self.state == FOOD_HUNT:
-            if len(get_adjacent_food(grid, self.coord)) >= 1:
+            if len(get_adjacent_food(food, self.coord)) >= 1:
                 # Food has been found. Add shallow copy of current path to
                 # known paths then return home.
                 paths.append([*self.current_path])
                 self.state = FOLLOW_PATH_HOME
             else:
-                adjacent_paths = get_adjacent_paths(grid, self.coord, paths)
+                adjacent_paths = get_adjacent_paths(self.coord, paths)
                 if len(adjacent_paths) >= 1:
                     new_path = random.choice(adjacent_paths)
                     # Create a copy of the selected path
@@ -74,8 +74,8 @@ class Ant:
                             self.coord[0] + vector[0],
                             self.coord[1] + vector[1]
                         )
-                        if (0 <= new_pos[0] < len(grid[0])
-                                and 0 <= new_pos[1] < len(grid)):
+                        if (0 <= new_pos[0] < GRID_WIDTH
+                                and 0 <= new_pos[1] < GRID_HEIGHT):
                             self.coord = new_pos
                             if new_pos in self.current_path:
                                 index = self.current_path.index(new_pos)
@@ -89,15 +89,17 @@ class Ant:
                             break
         elif self.state == FOLLOW_PATH_FOOD:
             if self.current_path_index == len(self.current_path) - 1:
-                if len(get_adjacent_food(grid, self.coord)) >= 1:
+                if len(get_adjacent_food(food, self.coord)) >= 1:
                     # Food is still present and the end of the path.
                     self.state = FOLLOW_PATH_HOME
                 else:
                     # Food is gone. Forget this path and stop other ants
                     # following it.
                     paths.remove(self.current_path)
+                    old_path = self.current_path
                     for ant in ants:
-                        ant.state = FOOD_HUNT
+                        if ant.current_path == old_path:
+                            ant.state = FOOD_HUNT
             else:
                 self.current_path_index += 1
                 self.coord = self.current_path[self.current_path_index]
@@ -109,7 +111,7 @@ class Ant:
                 self.coord = self.current_path[self.current_path_index]
 
 
-def get_adjacent_food(grid: List[List[bool]], pos: Tuple[int, int]
+def get_adjacent_food(food: List[Tuple[int, int]], pos: Tuple[int, int]
                       ) -> List[Tuple[int, int]]:
     """
     Get the coords of food tiles immediately surrounding a point on a grid.
@@ -121,15 +123,14 @@ def get_adjacent_food(grid: List[List[bool]], pos: Tuple[int, int]
             new_pos = (pos[0] + x_offset, pos[1] + y_offset)
             # Don't check the current cell position
             if ((y_offset != 0 or x_offset != 0)
-                    and 0 <= new_pos[1] < len(grid)
-                    and 0 <= new_pos[0] < len(grid[0])):
-                if grid[new_pos[1]][new_pos[0]]:
+                    and 0 <= new_pos[1] < GRID_HEIGHT
+                    and 0 <= new_pos[0] < GRID_WIDTH):
+                if new_pos in food:
                     coords.append(new_pos)
     return coords
 
 
-def get_adjacent_paths(grid: List[List[bool]], pos: Tuple[int, int],
-                       paths: List[List[Tuple[int, int]]]
+def get_adjacent_paths(pos: Tuple[int, int], paths: List[List[Tuple[int, int]]]
                        ) -> List[Tuple[List[Tuple[int, int]], int]]:
     """
     Get any paths immediately surrounding a point on a grid.
@@ -141,8 +142,8 @@ def get_adjacent_paths(grid: List[List[bool]], pos: Tuple[int, int],
             new_pos = (pos[0] + x_offset, pos[1] + y_offset)
             # Don't check the current cell position
             if ((y_offset != 0 or x_offset != 0)
-                    and 0 <= new_pos[1] < len(grid)
-                    and 0 <= new_pos[0] < len(grid[0])):
+                    and 0 <= new_pos[1] < GRID_HEIGHT
+                    and 0 <= new_pos[0] < GRID_WIDTH):
                 adjacent_paths += [
                     (x, x.index(new_pos)) for x in paths if new_pos in x
                 ]
@@ -158,7 +159,7 @@ def main() -> None:
     screen = pygame.display.set_mode((VIEWPORT_WIDTH, VIEWPORT_HEIGHT))
     pygame.display.set_caption("Ant Simulation - Stopped 1t/100ms")
     clock = pygame.time.Clock()
-    food_grid = [[False] * GRID_WIDTH for _ in range(GRID_HEIGHT)]
+    food_coords: List[Tuple[int, int]] = []
     living_ants = [Ant() for _ in range(ANT_COUNT)]
     paths_to_food: List[List[Tuple[int, int]]] = []
     perform_ticks = False
@@ -184,9 +185,7 @@ def main() -> None:
                 elif event.key == pygame.K_UP:
                     tick_interval += 10
                 elif event.key == pygame.K_r:
-                    food_grid = [
-                        [False] * GRID_WIDTH for _ in range(GRID_HEIGHT)
-                    ]
+                    food_coords = []
                     living_ants = [Ant() for _ in range(ANT_COUNT)]
                     paths_to_food = []
                 pygame.display.set_caption(
@@ -201,30 +200,30 @@ def main() -> None:
                         mouse_pos[0] // TILE_WIDTH,
                         mouse_pos[1] // TILE_HEIGHT
                     )
-                    # Flip bool value of tile
-                    food_grid[grid_pos[1]][grid_pos[0]] ^= True
+                    if grid_pos in food_coords:
+                        food_coords.remove(grid_pos)
+                    else:
+                        food_coords.append(grid_pos)
         do_tick = perform_ticks and since_last_tick >= tick_interval
         screen.fill(WHITE)
         if do_tick:
             for ant in living_ants:
-                ant.tick(food_grid, paths_to_food, living_ants)
+                ant.tick(food_coords, paths_to_food, living_ants)
             since_last_tick = 0
         ant_tiles = {x.coord for x in living_ants}
         if show_paths:
             path_coords = {coord for path in paths_to_food for coord in path}
         else:
             path_coords = set()
-        for y, row in enumerate(food_grid):
-            for x, tile in enumerate(row):
-                if do_tick:
-                    pass
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
                 pygame.draw.rect(
                     screen, BLACK, (
                         x * TILE_WIDTH, y * TILE_HEIGHT,
                         TILE_WIDTH + 2, TILE_HEIGHT + 2
                     )
                 )
-                if tile:
+                if (x, y) in food_coords:
                     colour = GREEN
                 elif (x, y) == ANT_HOME_COORD:
                     colour = BLUE
