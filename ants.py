@@ -4,7 +4,7 @@ A simulation of ants finding food and bringing it home along a path.
 import random
 import sys
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import pygame
 
@@ -30,6 +30,9 @@ TILE_HEIGHT = VIEWPORT_HEIGHT // GRID_HEIGHT
 
 ANT_HOME_COORD = (GRID_WIDTH // 2, GRID_HEIGHT // 2)
 ANT_COUNT = 100
+
+# Expressed in milliseconds (or None to disable)
+FOOD_MOVE_DELAY: Optional[int] = None
 
 
 @dataclass
@@ -166,10 +169,12 @@ def main() -> None:
     show_paths = True
     tick_interval = 100
     since_last_tick = 0
+    since_last_move = -FOOD_MOVE_DELAY if FOOD_MOVE_DELAY is not None else 0
     # Main game loop
     while True:
         frame_time = clock.tick()
         since_last_tick += frame_time
+        since_last_move += frame_time
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
@@ -206,6 +211,14 @@ def main() -> None:
                         food_coords.append(grid_pos)
         do_tick = perform_ticks and since_last_tick >= tick_interval
         screen.fill(WHITE)
+        if (FOOD_MOVE_DELAY is not None and perform_ticks
+                and since_last_move >= FOOD_MOVE_DELAY
+                and len(food_coords) >= 1):
+            food_coords[random.randint(0, len(food_coords) - 1)] = (
+                random.randint(0, GRID_WIDTH - 1),
+                random.randint(0, GRID_HEIGHT - 1)
+            )
+            since_last_move = 0
         if do_tick:
             for ant in living_ants:
                 ant.tick(food_coords, paths_to_food, living_ants)
