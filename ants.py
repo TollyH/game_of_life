@@ -29,7 +29,8 @@ TILE_WIDTH = VIEWPORT_WIDTH // GRID_WIDTH
 TILE_HEIGHT = VIEWPORT_HEIGHT // GRID_HEIGHT
 
 ANT_HOME_COORD = (GRID_WIDTH // 2, GRID_HEIGHT // 2)
-ANT_COUNT = 100
+ANT_COUNT = 500
+ANT_DRAW_RADIUS = min(TILE_WIDTH, TILE_HEIGHT) // 4
 
 # Expressed in milliseconds (or None to disable)
 FOOD_MOVE_DELAY: Optional[int] = None
@@ -44,6 +45,10 @@ class Ant:
     state: int = FOOD_HUNT
     current_path: List[Tuple[int, int]] = field(default_factory=list)
     current_path_index: int = -1
+    draw_offset: Tuple[float, float] = field(default_factory=lambda: (
+        random.randint(0, TILE_WIDTH - (ANT_DRAW_RADIUS * 2)),
+        random.randint(0, TILE_HEIGHT - (ANT_DRAW_RADIUS * 2))
+    ))
 
     def tick(self, food: List[Tuple[int, int]],
              paths: List[List[Tuple[int, int]]], ants: List['Ant']) -> None:
@@ -185,7 +190,7 @@ def main() -> None:
                 elif event.key == pygame.K_SPACE:
                     # Flip bool value
                     perform_ticks ^= True
-                elif event.key == pygame.K_DOWN and tick_interval > 10:
+                elif event.key == pygame.K_DOWN and tick_interval >= 10:
                     tick_interval -= 10
                 elif event.key == pygame.K_UP:
                     tick_interval += 10
@@ -220,10 +225,7 @@ def main() -> None:
             )
             since_last_move = 0
         if do_tick:
-            for ant in living_ants:
-                ant.tick(food_coords, paths_to_food, living_ants)
             since_last_tick = 0
-        ant_tiles = {x.coord for x in living_ants}
         if show_paths:
             path_coords = {coord for path in paths_to_food for coord in path}
         else:
@@ -240,8 +242,6 @@ def main() -> None:
                     colour = GREEN
                 elif (x, y) == ANT_HOME_COORD:
                     colour = BLUE
-                elif (x, y) in ant_tiles:
-                    colour = RED
                 elif show_paths and (x, y) in path_coords:
                     colour = PINK
                 else:
@@ -252,6 +252,17 @@ def main() -> None:
                         TILE_WIDTH - 1, TILE_HEIGHT - 1
                     )
                 )
+        for ant in living_ants:
+            if do_tick:
+                ant.tick(food_coords, paths_to_food, living_ants)
+            pygame.draw.circle(
+                screen, RED, (
+                    ant.coord[0] * TILE_WIDTH + ANT_DRAW_RADIUS
+                    + ant.draw_offset[0],
+                    ant.coord[1] * TILE_HEIGHT + ANT_DRAW_RADIUS
+                    + ant.draw_offset[1]
+                ), ANT_DRAW_RADIUS
+            )
         pygame.display.update()
         print(f"\r{clock.get_fps():5.2f} FPS", end="", flush=True)
 
