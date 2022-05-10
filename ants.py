@@ -56,20 +56,20 @@ class Ant:
         Update this ant depending on its state and surroundings.
         """
         if self.state == FOOD_HUNT:
-            if len(get_adjacent_food(food, self.coord)) >= 1:
-                # Food has been found. Add shallow copy of current path to
-                # known paths then return home.
-                paths.append([*self.current_path])
-                self.state = FOLLOW_PATH_HOME
+            adjacent_paths = get_adjacent_paths(self.coord, paths)
+            if len(adjacent_paths) >= 1:
+                new_path = random.choice(adjacent_paths)
+                # Create a copy of the selected path
+                self.current_path = [*new_path[0]]
+                self.current_path_index = new_path[1]
+                self.coord = self.current_path[self.current_path_index]
+                self.state = FOLLOW_PATH_FOOD
             else:
-                adjacent_paths = get_adjacent_paths(self.coord, paths)
-                if len(adjacent_paths) >= 1:
-                    new_path = random.choice(adjacent_paths)
-                    # Create a copy of the selected path
-                    self.current_path = [*new_path[0]]
-                    self.current_path_index = new_path[1]
-                    self.coord = self.current_path[self.current_path_index]
-                    self.state = FOLLOW_PATH_FOOD
+                if len(get_adjacent_food(food, self.coord)) >= 1:
+                    # Food has been found. Add shallow copy of current path to
+                    # known paths then return home.
+                    paths.append([*self.current_path])
+                    self.state = FOLLOW_PATH_HOME
                 else:
                     # No food found yet, move in a random direction.
                     directions = [
